@@ -7,12 +7,11 @@ abstract class WeatherState extends Equatable {
 }
 
 class WeatherInitial extends WeatherState {}
-
 class WeatherLoading extends WeatherState {}
 
 class WeatherLoaded extends WeatherState {
-  final Map<String, dynamic> data;
-  final String source; // 'query' or 'coords'
+  final Map<String, dynamic> data;   // {current, forecast, astronomy, timezone, history, future, marine, advForecast, futureCustom, historyCustom}
+  final String source;               // 'query' or 'coords'
   const WeatherLoaded(this.data, {required this.source});
   @override
   List<Object?> get props => [data, source];

@@ -5,15 +5,22 @@ import '../services/weather_api.dart';
 
 class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   final WeatherApi api;
-
-  // Keep last “input” so Refresh can re-fetch
-  String? _lastQuery;
-  String? _lastLatLon; // "lat,lon"
-
   WeatherBloc(this.api) : super(WeatherInitial()) {
     on<FetchWeather>(_onFetchWeather);
     on<FetchWeatherByCoords>(_onFetchWeatherByCoords);
     on<RefreshWeather>(_onRefresh);
+
+    on<FetchForecastAdvanced>(_onForecastAdvanced);
+    on<FetchFutureCustom>(_onFutureCustom);
+    on<FetchHistoryRange>(_onHistoryRange);
+  }
+
+  String? _lastQuery;
+  String? _lastLatLon;
+  Map<String, dynamic> _data = {};
+  Map<String, dynamic> _merge(Map<String, dynamic> patch) {
+    _data = {..._data, ...patch};
+    return _data;
   }
 
   Future<void> _onFetchWeather(FetchWeather e, Emitter<WeatherState> emit) async {
@@ -39,10 +46,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
     try {
       final current = await api.current(q: q, aqi: 'yes');
 
-      // If q was city, extract lat,lon for timezone/marine
-      final loc = current['location'] as Map<String, dynamic>;
-      final latlon = '${(loc['lat'] as num).toString()},${(loc['lon'] as num).toString()}';
-
+      // format some dates
       String fmt(DateTime d) =>
           '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       final now = DateTime.now();
@@ -50,7 +54,10 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
       final yesterday = fmt(now.subtract(const Duration(days: 1)));
       final plus30 = fmt(now.add(const Duration(days: 30)));
 
-      final results = await Future.wait([
+      final loc = current['location'] as Map<String, dynamic>;
+      final latlon = '${(loc['lat'] as num)},${(loc['lon'] as num)}';
+
+      final parts = await Future.wait([
         api.forecast(q: q, days: 3, alerts: 'yes', aqi: 'yes'),
         api.astronomy(q: q, dt: today),
         api.timeZone(q: latlon),
@@ -59,17 +66,63 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
         api.marine(q: latlon, dt: today),
       ].map((f) => f.then((v) => v).catchError((e) => {'_error': e.toString()})));
 
-      emit(WeatherLoaded({
+      _merge({
         'current': current,
-        'forecast': results[0],
-        'astronomy': results[1],
-        'timezone': results[2],
-        'history': results[3],
-        'future': results[4],
-        'marine': results[5],
-      }, source: source));
+        'forecast': parts[0],
+        'astronomy': parts[1],
+        'timezone': parts[2],
+        'history': parts[3],
+        'future': parts[4],
+        'marine': parts[5],
+      });
+
+      emit(WeatherLoaded(_data, source: source));
     } catch (e) {
       emit(WeatherError(e.toString()));
+    }
+  }
+
+  Future<void> _onForecastAdvanced(FetchForecastAdvanced e, Emitter<WeatherState> emit) async {
+    try {
+      final res = await api.forecast(
+        q: e.q,
+        days: e.days,
+        lang: e.lang,
+        alerts: e.alerts ? 'yes' : 'no',
+        aqi: e.aqi ? 'yes' : 'no',
+        dt: e.dt ?? '',
+        hour: e.hour?.toString() ?? '',
+      );
+      _merge({'advForecast': res});
+      emit(WeatherLoaded(_data, source: _lastLatLon != null ? 'coords' : 'query'));
+    } catch (err) {
+      emit(WeatherError(err.toString()));
+    }
+  }
+
+  Future<void> _onFutureCustom(FetchFutureCustom e, Emitter<WeatherState> emit) async {
+    try {
+      final res = await api.future(q: e.q, dt: e.dt, lang: e.lang);
+      _merge({'futureCustom': res});
+      emit(WeatherLoaded(_data, source: _lastLatLon != null ? 'coords' : 'query'));
+    } catch (err) {
+      emit(WeatherError(err.toString()));
+    }
+  }
+
+  Future<void> _onHistoryRange(FetchHistoryRange e, Emitter<WeatherState> emit) async {
+    try {
+      final res = await api.history(
+        q: e.q,
+        dt: e.dt,
+        endDt: e.endDt ?? '',
+        hour: e.hour?.toString() ?? '',
+        lang: e.lang,
+      );
+      _merge({'historyCustom': res});
+      emit(WeatherLoaded(_data, source: _lastLatLon != null ? 'coords' : 'query'));
+    } catch (err) {
+      emit(WeatherError(err.toString()));
     }
   }
 }
