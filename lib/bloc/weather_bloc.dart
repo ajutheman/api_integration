@@ -6,21 +6,43 @@ import '../services/weather_api.dart';
 class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
   final WeatherApi api;
 
+  // Keep last “input” so Refresh can re-fetch
+  String? _lastQuery;
+  String? _lastLatLon; // "lat,lon"
+
   WeatherBloc(this.api) : super(WeatherInitial()) {
     on<FetchWeather>(_onFetchWeather);
+    on<FetchWeatherByCoords>(_onFetchWeatherByCoords);
+    on<RefreshWeather>(_onRefresh);
   }
 
-  Future<void> _onFetchWeather(FetchWeather event, Emitter<WeatherState> emit) async {
+  Future<void> _onFetchWeather(FetchWeather e, Emitter<WeatherState> emit) async {
+    _lastQuery = e.query;
+    _lastLatLon = null;
+    await _fetchAll(emit, q: e.query, source: 'query');
+  }
+
+  Future<void> _onFetchWeatherByCoords(FetchWeatherByCoords e, Emitter<WeatherState> emit) async {
+    _lastLatLon = '${e.lat},${e.lon}';
+    _lastQuery = null;
+    await _fetchAll(emit, q: _lastLatLon!, source: 'coords');
+  }
+
+  Future<void> _onRefresh(RefreshWeather e, Emitter<WeatherState> emit) async {
+    final q = _lastLatLon ?? _lastQuery;
+    if (q == null) return;
+    await _fetchAll(emit, q: q, source: _lastLatLon != null ? 'coords' : 'query');
+  }
+
+  Future<void> _fetchAll(Emitter<WeatherState> emit, {required String q, required String source}) async {
     emit(WeatherLoading());
     try {
-      // 1) Current (also gives lat/lon)
-      final current = await api.current(q: event.query, aqi: 'yes');
-      final loc = current['location'] as Map<String, dynamic>;
-      final lat = (loc['lat'] as num).toString();
-      final lon = (loc['lon'] as num).toString();
-      final latlon = '$lat,$lon';
+      final current = await api.current(q: q, aqi: 'yes');
 
-      // Dates
+      // If q was city, extract lat,lon for timezone/marine
+      final loc = current['location'] as Map<String, dynamic>;
+      final latlon = '${(loc['lat'] as num).toString()},${(loc['lon'] as num).toString()}';
+
       String fmt(DateTime d) =>
           '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       final now = DateTime.now();
@@ -28,13 +50,12 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
       final yesterday = fmt(now.subtract(const Duration(days: 1)));
       final plus30 = fmt(now.add(const Duration(days: 30)));
 
-      // 2) Other endpoints (catch per-call errors so the UI still shows what it can)
       final results = await Future.wait([
-        api.forecast(q: event.query, days: 3, alerts: 'yes', aqi: 'yes'),
-        api.astronomy(q: event.query, dt: today),
+        api.forecast(q: q, days: 3, alerts: 'yes', aqi: 'yes'),
+        api.astronomy(q: q, dt: today),
         api.timeZone(q: latlon),
-        api.history(q: event.query, dt: yesterday),
-        api.future(q: event.query, dt: plus30),
+        api.history(q: q, dt: yesterday),
+        api.future(q: q, dt: plus30),
         api.marine(q: latlon, dt: today),
       ].map((f) => f.then((v) => v).catchError((e) => {'_error': e.toString()})));
 
@@ -46,7 +67,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
         'history': results[3],
         'future': results[4],
         'marine': results[5],
-      }));
+      }, source: source));
     } catch (e) {
       emit(WeatherError(e.toString()));
     }

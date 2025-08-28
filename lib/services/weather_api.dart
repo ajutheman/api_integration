@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 const _apiKey = String.fromEnvironment('WEATHER_API_KEY', defaultValue: '');
 
 class WeatherApiException implements Exception {
-  final int? code; // WeatherAPI error code (e.g., 1002, 1003, 2007)
+  final int? code;
   final String msg;
   WeatherApiException(this.msg, {this.code});
   @override
@@ -31,10 +31,7 @@ class WeatherApi {
         'API key missing. Start with --dart-define=WEATHER_API_KEY=YOUR_KEY',
       );
     }
-    // Optional: uncomment for detailed logs
-    // _dio.interceptors.add(LogInterceptor(
-    //   request: true, responseBody: true, error: true,
-    // ));
+    // _dio.interceptors.add(LogInterceptor(request: true, responseBody: true, error: true));
   }
 
   Map<String, String> _withKey(Map<String, String> params) =>
@@ -104,8 +101,8 @@ class WeatherApi {
     String unixdt = '',
     String hour = '',
     String lang = '',
-    String alerts = 'no',
-    String aqi = 'no',
+    String alerts = 'yes', // include alerts
+    String aqi = 'yes',    // include AQI
     String tp = '',
   }) => _getMap('/forecast.json', {
     'q': q,
@@ -119,11 +116,8 @@ class WeatherApi {
     'tp': tp,
   });
 
-  Future<Map<String, dynamic>> future({
-    required String q,
-    required String dt,
-    String lang = '',
-  }) => _getMap('/future.json', {'q': q, 'dt': dt, 'lang': lang});
+  Future<Map<String, dynamic>> future({required String q, required String dt, String lang = ''})
+  => _getMap('/future.json', {'q': q, 'dt': dt, 'lang': lang});
 
   Future<Map<String, dynamic>> history({
     required String q,
@@ -134,33 +128,15 @@ class WeatherApi {
     String hour = '',
     String lang = '',
   }) => _getMap('/history.json', {
-    'q': q,
-    'dt': dt,
-    'end_dt': endDt,
-    'unixdt': unixdt,
-    'unixend_dt': unixendDt,
-    'hour': hour,
-    'lang': lang,
+    'q': q, 'dt': dt, 'end_dt': endDt, 'unixdt': unixdt, 'unixend_dt': unixendDt, 'hour': hour, 'lang': lang,
   });
 
-  Future<Map<String, dynamic>> marine({
-    required String q, // "lat,lon"
-    String dt = '',
-    String endDt = '',
-    String lang = '',
-  }) => _getMap('/marine.json', {'q': q, 'dt': dt, 'end_dt': endDt, 'lang': lang});
+  Future<Map<String, dynamic>> marine({required String q, String dt = '', String endDt = '', String lang = ''})
+  => _getMap('/marine.json', {'q': q, 'dt': dt, 'end_dt': endDt, 'lang': lang});
 
-  Future<List<dynamic>> search({required String q}) =>
-      _getList('/search.json', {'q': q});
-
-  Future<Map<String, dynamic>> ipLookup({String q = ''}) =>
-      _getMap('/ip.json', {'q': q});
-
-  Future<Map<String, dynamic>> timeZone({required String q}) =>
-      _getMap('/timezone.json', {'q': q});
-
-  Future<Map<String, dynamic>> astronomy({
-    required String q,
-    String dt = '',
-  }) => _getMap('/astronomy.json', {'q': q, 'dt': dt});
+  Future<List<dynamic>> search({required String q}) => _getList('/search.json', {'q': q});
+  Future<Map<String, dynamic>> ipLookup({String q = ''}) => _getMap('/ip.json', {'q': q});
+  Future<Map<String, dynamic>> timeZone({required String q}) => _getMap('/timezone.json', {'q': q});
+  Future<Map<String, dynamic>> astronomy({required String q, String dt = ''})
+  => _getMap('/astronomy.json', {'q': q, 'dt': dt});
 }

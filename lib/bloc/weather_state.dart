@@ -12,9 +12,10 @@ class WeatherLoading extends WeatherState {}
 
 class WeatherLoaded extends WeatherState {
   final Map<String, dynamic> data;
-  const WeatherLoaded(this.data);
+  final String source; // 'query' or 'coords'
+  const WeatherLoaded(this.data, {required this.source});
   @override
-  List<Object?> get props => [data];
+  List<Object?> get props => [data, source];
 }
 
 class WeatherError extends WeatherState {
