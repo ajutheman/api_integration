@@ -467,9 +467,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   );
 
   // Enhanced Advanced Panel
+// Enhanced Advanced Panel (scrollable body)
   Widget _enhancedAdvancedPanel() {
+    final theme = Theme.of(context);
+
     return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.white30),
+      data: theme.copyWith(dividerColor: Colors.white30),
       child: Container(
         decoration: _enhancedPanelDeco(),
         child: ExpansionTile(
@@ -477,12 +480,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           collapsedBackgroundColor: Colors.transparent,
           iconColor: Colors.white,
           collapsedIconColor: Colors.white,
+          // we'll handle inner padding ourselves
+          childrenPadding: EdgeInsets.zero,
           title: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFF667eea), Color(0xFFf093fb)]),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFFf093fb)],
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
@@ -494,162 +501,186 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ],
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+
+          // ⬇️ Scrollable body
           children: [
-            _enhancedSubHeader('🌤️ Forecast (/forecast.json)'),
-            Row(children: [
-              Expanded(
-                  child: _enhancedChipBox(
-                    label: 'Days: $_days',
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: const Color(0xFF00F5FF),
-                        inactiveTrackColor: Colors.white30,
-                        thumbColor: const Color(0xFFFF3CAC),
-                        overlayColor: const Color(0xFFFF3CAC).withOpacity(0.2),
-                      ),
-                      child: Slider(
-                        min: 1,
-                        max: 14,
-                        divisions: 13,
-                        value: _days.toDouble(),
-                        onChanged: (v) => setState(() => _days = v.round()),
-                      ),
-                    ),
-                  )),
-              const SizedBox(width: 12),
-              _enhancedDropdownBox<String>(
-                label: 'Lang',
-                value: _lang,
-                items: const ['en', 'hi', 'ml', 'ta', 'ar', 'es', 'fr', 'de', 'it', 'ru'],
-                onChanged: (v) => setState(() => _lang = v ?? 'en'),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                // tune this to how tall you want the open card to be
+                maxHeight: MediaQuery.of(context).size.height * 0.65,
               ),
-            ]),
-            Row(children: [
-              Expanded(child: _enhancedToggleBox('Alerts', _alerts, (v) => setState(() => _alerts = v))),
-              const SizedBox(width: 12),
-              Expanded(child: _enhancedToggleBox('AQI', _aqi, (v) => setState(() => _aqi = v))),
-            ]),
-            Row(children: [
-              Expanded(child: _enhancedToggleBox('Use date', _useForecastDate, (v) => setState(() => _useForecastDate = v))),
-              if (_useForecastDate) const SizedBox(width: 12),
-              if (_useForecastDate)
-                Expanded(child: _enhancedDateButton('Pick date', _forecastDate, (d) => setState(() => _forecastDate = d))),
-            ]),
-            Row(children: [
-              Expanded(child: _enhancedToggleBox('Use hour', _useForecastHour, (v) => setState(() => _useForecastHour = v))),
-              if (_useForecastHour) const SizedBox(width: 12),
-              if (_useForecastHour)
-                Expanded(
-                  child: _enhancedChipBox(
-                    label: 'Hour: $_forecastHour',
-                    child: SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: const Color(0xFF00F5FF),
-                        inactiveTrackColor: Colors.white30,
-                        thumbColor: const Color(0xFFFF3CAC),
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _enhancedSubHeader('🌤️ Forecast (/forecast.json)'),
+                      Row(children: [
+                        Expanded(
+                          child: _enhancedChipBox(
+                            label: 'Days: $_days',
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: const Color(0xFF00F5FF),
+                                inactiveTrackColor: Colors.white30,
+                                thumbColor: const Color(0xFFFF3CAC),
+                                overlayColor: const Color(0xFFFF3CAC).withOpacity(0.2),
+                              ),
+                              child: Slider(
+                                min: 1,
+                                max: 14,
+                                divisions: 13,
+                                value: _days.toDouble(),
+                                onChanged: (v) => setState(() => _days = v.round()),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _enhancedDropdownBox<String>(
+                          label: 'Lang',
+                          value: _lang,
+                          items: const ['en', 'hi', 'ml', 'ta', 'ar', 'es', 'fr', 'de', 'it', 'ru'],
+                          onChanged: (v) => setState(() => _lang = v ?? 'en'),
+                        ),
+                      ]),
+                      Row(children: [
+                        Expanded(child: _enhancedToggleBox('Alerts', _alerts, (v) => setState(() => _alerts = v))),
+                        const SizedBox(width: 12),
+                        Expanded(child: _enhancedToggleBox('AQI', _aqi, (v) => setState(() => _aqi = v))),
+                      ]),
+                      Row(children: [
+                        Expanded(child: _enhancedToggleBox('Use date', _useForecastDate, (v) => setState(() => _useForecastDate = v))),
+                        if (_useForecastDate) const SizedBox(width: 12),
+                        if (_useForecastDate)
+                          Expanded(child: _enhancedDateButton('Pick date', _forecastDate, (d) => setState(() => _forecastDate = d))),
+                      ]),
+                      Row(children: [
+                        Expanded(child: _enhancedToggleBox('Use hour', _useForecastHour, (v) => setState(() => _useForecastHour = v))),
+                        if (_useForecastHour) const SizedBox(width: 12),
+                        if (_useForecastHour)
+                          Expanded(
+                            child: _enhancedChipBox(
+                              label: 'Hour: $_forecastHour',
+                              child: SliderTheme(
+                                data: SliderTheme.of(context).copyWith(
+                                  activeTrackColor: const Color(0xFF00F5FF),
+                                  inactiveTrackColor: Colors.white30,
+                                  thumbColor: const Color(0xFFFF3CAC),
+                                ),
+                                child: Slider(
+                                  min: 0,
+                                  max: 23,
+                                  divisions: 23,
+                                  value: _forecastHour.toDouble(),
+                                  onChanged: (v) => setState(() => _forecastHour = v.round()),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ]),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _enhancedGradientButton(
+                          label: '🚀 Run Forecast',
+                          colors: const [Color(0xFF667eea), Color(0xFF764ba2)],
+                          onTap: () {
+                            final q = _currentQ();
+                            context.read<WeatherBloc>().add(FetchForecastAdvanced(
+                              q: q,
+                              days: _days,
+                              lang: _lang,
+                              alerts: _alerts,
+                              aqi: _aqi,
+                              dt: _useForecastDate ? _fmt(_forecastDate) : null,
+                              hour: _useForecastHour ? _forecastHour : null,
+                            ));
+                          },
+                        ),
                       ),
-                      child: Slider(
-                        min: 0,
-                        max: 23,
-                        divisions: 23,
-                        value: _forecastHour.toDouble(),
-                        onChanged: (v) => setState(() => _forecastHour = v.round()),
+                      const SizedBox(height: 16),
+                      _enhancedSubHeader('🔮 Future (/future.json)'),
+                      Row(children: [
+                        Expanded(child: _enhancedDateButton('Pick future date', _futureDate, (d) => setState(() => _futureDate = d))),
+                        const SizedBox(width: 12),
+                        _enhancedDropdownBox<String>(
+                          label: 'Lang',
+                          value: _lang,
+                          items: const ['en', 'hi', 'ml', 'ta', 'ar', 'es', 'fr', 'de', 'it', 'ru'],
+                          onChanged: (v) => setState(() => _lang = v ?? 'en'),
+                        ),
+                      ]),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _enhancedGradientButton(
+                          label: '🔮 Run Future',
+                          colors: const [Color(0xFFf093fb), Color(0xFFf5576c)],
+                          onTap: () {
+                            final q = _currentQ();
+                            context.read<WeatherBloc>().add(
+                              FetchFutureCustom(q: q, dt: _fmt(_futureDate), lang: _lang),
+                            );
+                          },
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      _enhancedSubHeader('📚 History (/history.json)'),
+                      Row(children: [
+                        Expanded(child: _enhancedDateButton('Start (dt)', _historyStart, (d) => setState(() => _historyStart = d))),
+                        const SizedBox(width: 12),
+                        Expanded(child: _enhancedToggleBox('Use end_dt', _useHistoryEnd, (v) => setState(() => _useHistoryEnd = v))),
+                      ]),
+                      if (_useHistoryEnd)
+                        Row(children: [
+                          Expanded(child: _enhancedDateButton('End (end_dt)', _historyEnd, (d) => setState(() => _historyEnd = d))),
+                          const SizedBox(width: 12),
+                          Expanded(child: _enhancedToggleBox('Use hour', _useHistoryHour, (v) => setState(() => _useHistoryHour = v))),
+                        ])
+                      else
+                        Row(children: [
+                          Expanded(child: _enhancedToggleBox('Use hour', _useHistoryHour, (v) => setState(() => _useHistoryHour = v))),
+                        ]),
+                      if (_useHistoryHour)
+                        _enhancedChipBox(
+                          label: 'Hour: $_historyHour',
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              activeTrackColor: const Color(0xFF00F5FF),
+                              inactiveTrackColor: Colors.white30,
+                              thumbColor: const Color(0xFFFF3CAC),
+                            ),
+                            child: Slider(
+                              min: 0,
+                              max: 23,
+                              divisions: 23,
+                              value: _historyHour.toDouble(),
+                              onChanged: (v) => setState(() => _historyHour = v.round()),
+                            ),
+                          ),
+                        ),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _enhancedGradientButton(
+                          label: '📚 Run History',
+                          colors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
+                          onTap: () {
+                            final q = _currentQ();
+                            context.read<WeatherBloc>().add(FetchHistoryRange(
+                              q: q,
+                              dt: _fmt(_historyStart),
+                              endDt: _useHistoryEnd ? _fmt(_historyEnd) : null,
+                              hour: _useHistoryHour ? _historyHour : null,
+                              lang: _lang,
+                            ));
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ]),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _enhancedGradientButton(
-                  label: '🚀 Run Forecast',
-                  colors: const [Color(0xFF667eea), Color(0xFF764ba2)],
-                  onTap: () {
-                    final q = _currentQ();
-                    context.read<WeatherBloc>().add(FetchForecastAdvanced(
-                      q: q,
-                      days: _days,
-                      lang: _lang,
-                      alerts: _alerts,
-                      aqi: _aqi,
-                      dt: _useForecastDate ? _fmt(_forecastDate) : null,
-                      hour: _useForecastHour ? _forecastHour : null,
-                    ));
-                  }),
-            ),
-            const SizedBox(height: 16),
-            _enhancedSubHeader('🔮 Future (/future.json)'),
-            Row(children: [
-              Expanded(child: _enhancedDateButton('Pick future date', _futureDate, (d) => setState(() => _futureDate = d))),
-              const SizedBox(width: 12),
-              _enhancedDropdownBox<String>(
-                label: 'Lang',
-                value: _lang,
-                items: const ['en', 'hi', 'ml', 'ta', 'ar', 'es', 'fr', 'de', 'it', 'ru'],
-                onChanged: (v) => setState(() => _lang = v ?? 'en'),
               ),
-            ]),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _enhancedGradientButton(
-                  label: '🔮 Run Future',
-                  colors: const [Color(0xFFf093fb), Color(0xFFf5576c)],
-                  onTap: () {
-                    final q = _currentQ();
-                    context.read<WeatherBloc>().add(FetchFutureCustom(q: q, dt: _fmt(_futureDate), lang: _lang));
-                  }),
-            ),
-            const SizedBox(height: 16),
-            _enhancedSubHeader('📚 History (/history.json)'),
-            Row(children: [
-              Expanded(child: _enhancedDateButton('Start (dt)', _historyStart, (d) => setState(() => _historyStart = d))),
-              const SizedBox(width: 12),
-              Expanded(child: _enhancedToggleBox('Use end_dt', _useHistoryEnd, (v) => setState(() => _useHistoryEnd = v))),
-            ]),
-            if (_useHistoryEnd)
-              Row(children: [
-                Expanded(child: _enhancedDateButton('End (end_dt)', _historyEnd, (d) => setState(() => _historyEnd = d))),
-                const SizedBox(width: 12),
-                Expanded(child: _enhancedToggleBox('Use hour', _useHistoryHour, (v) => setState(() => _useHistoryHour = v))),
-              ])
-            else
-              Row(children: [
-                Expanded(child: _enhancedToggleBox('Use hour', _useHistoryHour, (v) => setState(() => _useHistoryHour = v))),
-              ]),
-            if (_useHistoryHour)
-              _enhancedChipBox(
-                label: 'Hour: $_historyHour',
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: const Color(0xFF00F5FF),
-                    inactiveTrackColor: Colors.white30,
-                    thumbColor: const Color(0xFFFF3CAC),
-                  ),
-                  child: Slider(
-                    min: 0,
-                    max: 23,
-                    divisions: 23,
-                    value: _historyHour.toDouble(),
-                    onChanged: (v) => setState(() => _historyHour = v.round()),
-                  ),
-                ),
-              ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _enhancedGradientButton(
-                  label: '📚 Run History',
-                  colors: const [Color(0xFF4facfe), Color(0xFF00f2fe)],
-                  onTap: () {
-                    final q = _currentQ();
-                    context.read<WeatherBloc>().add(FetchHistoryRange(
-                      q: q,
-                      dt: _fmt(_historyStart),
-                      endDt: _useHistoryEnd ? _fmt(_historyEnd) : null,
-                      hour: _useHistoryHour ? _historyHour : null,
-                      lang: _lang,
-                    ));
-                  }),
             ),
           ],
         ),
